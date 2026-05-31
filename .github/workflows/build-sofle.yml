@@ -8,12 +8,16 @@ on:
       - "app/boards/shields/sofle/**"
       - "app/dts/layouts/josefadamcik/**"
       - "app/boards/nicekeyboards/**"
+      - "app/west.yml"
+      - "modules/nice_oled/**"
       - ".github/workflows/build-sofle.yml"
   pull_request:
     paths:
       - "app/boards/shields/sofle/**"
       - "app/dts/layouts/josefadamcik/**"
       - "app/boards/nicekeyboards/**"
+      - "app/west.yml"
+      - "modules/nice_oled/**"
       - ".github/workflows/build-sofle.yml"
   workflow_dispatch:
 
@@ -34,9 +38,9 @@ jobs:
       matrix:
         include:
           - board: nice_nano
-            shield: sofle_left
+            shield: sofle_left nice_oled
           - board: nice_nano
-            shield: sofle_right
+            shield: sofle_right nice_oled
     steps:
       - name: Checkout
         uses: actions/checkout@v6
