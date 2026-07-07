@@ -1,13 +1,160 @@
-# Zephyr™ Mechanical Keyboard (ZMK) Firmware
+# Sofle RGB (MX) — ZMK firmware · CODE/KEEB
 
-[![Discord](https://img.shields.io/discord/719497620560543766)](https://zmk.dev/community/discord/invite)
-[![Build](https://github.com/zmkfirmware/zmk/workflows/Build/badge.svg)](https://github.com/zmkfirmware/zmk/actions)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+ZMK firmware for the CODE/KEEB **Sofle RGB (MX)**: nice!nano v2, vertical
+OLED displays, 36 RGB LEDs per half (encoder indicator + underglow +
+per-key), 2 rotary encoders and ZMK Studio.
 
-[ZMK Firmware](https://zmk.dev/) is an open source ([MIT](LICENSE)) keyboard firmware built on the [Zephyr™ Project](https://www.zephyrproject.org/) Real Time Operating System (RTOS). ZMK's goal is to provide a modern, wireless, and powerful firmware free of licensing issues.
+It bundles a **custom RGB effect engine** (vendored and heavily extended
+from [zmk-rgb-fx], MIT) and a **fork of the display module**
+([codekeeb/zmk-nice-oled], `selectable` branch) with features that don't
+exist in the originals.
 
-Check out the website to learn more: https://zmk.dev/.
+> This is the **MX** variant. The Choc wireless variant lives in
+> [codekeeb/sofle-choc-rgb-zmk](https://github.com/codekeeb/sofle-choc-rgb-zmk)
+> and uses a different data pin (P0.08) and LED count (30).
 
-You can also come join our [ZMK Discord Server](https://zmk.dev/community/discord/invite).
+---
 
-To review features, check out the [feature overview](https://zmk.dev/docs/). ZMK is under active development, and new features are listed with the [enhancement label](https://github.com/zmkfirmware/zmk/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) in GitHub. Please feel free to add 👍 to the issue description of any requests to upvote the feature.
+## ⌨️ Controls
+
+Layers: **base**, **lower**, **raise**, and **adjust** (lower + raise together).
+
+### Encoders
+
+| Gesture                 | Base / Lower / Raise | ADJUST      |
+| ----------------------- | -------------------- | ----------- |
+| **Turn left encoder**   | Volume               | RGB mode ±  |
+| **Turn right encoder**  | Page Up/Down         | Hue ±       |
+| **Press right encoder** | Mute (base)          | Next OLED animation |
+
+### RGB (ADJUST layer, left half)
+
+| Key      | Function                     |
+| -------- | ---------------------------- |
+| HUD / HUI| Hue − / +                    |
+| SPD − / +| Speed − / +                  |
+| BRD / BRI| Brightness − / +             |
+| EFF      | Next RGB mode                |
+| TOG      | RGB on/off                   |
+| EXTPWR   | Toggle external power        |
+
+All RGB settings (mode, hue, brightness, speed, on/off) and the selected
+OLED animation **persist in flash**: they survive power cycles and
+reflashes (only `settings_reset` clears them).
+
+- **ZMK Studio**: the left half ships Studio; connect over USB, open
+  [zmk.studio](https://zmk.studio) to remap live without flashing.
+
+---
+
+## 🌈 RGB system
+
+Coordinate-based animation engine: every LED has an (x,y) position on a
+**continuous canvas from 0 to 240 spanning both halves**, so horizontal
+gradients cross the seam without a jump. The maps live in
+`config/sofle_left.overlay` and `config/sofle_right.overlay`.
+
+### LED chain (36 per half)
+
+From the josefadamcik Sofle RGB v4 PCB:
+
+- **LED 1** = encoder indicator
+- **LED 2-7** = underglow (drop lighting)
+- **LED 8-36** = per-key (underlighting)
+
+The overlays hold the real (x,y) of each LED read from the PCB photo, so
+positional effects follow the physical layout.
+
+### Modes (cycle with ADJUST + left encoder, or the EFF key)
+
+| #  | Mode         | Description                                                 |
+| -- | ------------ | ----------------------------------------------------------- |
+| 1  | Gradient     | 3-color gradient animated diagonally                         |
+| 2  | Ripple       | Blue waves from each pressed key                             |
+| 3  | Sparkle      | Cyan/magenta sparkles                                        |
+| 4  | Solid        | Uniform color cycling amber↔pink                             |
+| 5  | Fire         | Vertical red-orange-yellow gradient, fast                    |
+| 6  | Ocean        | Blue-cyan-green horizontal, very slow                        |
+| 7  | Gold sparkle | Fast golden sparkles                                         |
+| 8  | Pink ripple  | Faster, wider pink waves                                     |
+| 9  | Sunset       | **Static**: orange-coral-pink-purple-blue (S100, tight arc)  |
+| 10 | Heatmap      | Each key lights up when pressed and fades out (~1.2 s)       |
+
+### Global controls
+
+- **Hue**: a 0-359° offset applied in the HSL→RGB conversion — rotates the
+  full palette of any mode without destroying it. 20° steps.
+- **Brightness**: 5 steps (minimum 1: turning off is the toggle's job).
+- **Speed**: 5 steps (0.25×–4×) scaling the animation tick period.
+
+### Editing palettes and speeds
+
+Every mode is a node in both `sofle_*.overlay` files (edit BOTH!):
+`colors = <HSL(hue, saturation, lightness) ...>` (hue 0-359, S=100 L=50 is
+the purest color), `duration` (lower = faster), `angle` for gradients.
+
+---
+
+## 🖥️ OLED displays
+
+Module: [codekeeb/zmk-nice-oled] `selectable` branch.
+
+- **Left (central)**: graphic battery, BT/USB output, layer, profile, and
+  **Bongo Cat** banging along to your WPM.
+- **Right (peripheral)**: graphic battery + **runtime-switchable animation**
+  (ADJUST + press right encoder, persists): gem, cat, 3D head, spaceman,
+  pokemon, CODE/KEEB logo.
+- **Graphic battery**: battery icon with proportional fill + bolt while
+  charging.
+
+---
+
+## 🔋 Battery
+
+- **Real percentage**: custom driver (`src/battery_nrf_vddh_curve.c`) with
+  an interpolated LiPo discharge curve (21 points) instead of ZMK's
+  4.20→3.45 V straight line. The % depends only on voltage.
+- `CONFIG_BOARD_ENABLE_DCDC_HV=y`: ZMK ≥ v0.3 disabled it by default; on
+  boards with an inductor it's needed to power the 36 LEDs.
+
+---
+
+## 🔧 Hardware
+
+| Property        | Value          |
+| --------------- | -------------- |
+| Board           | nice!nano v2   |
+| LED data pin    | **P0.06**      |
+| LEDs per half   | **36** (encoder + underglow + per-key) |
+| PCB             | josefadamcik Sofle RGB v4 (MX) |
+
+---
+
+## 🏗️ Builds
+
+Push to `main` → GitHub Actions publishes the `firmware` artifact
+(`sofle_left` with ZMK Studio, `sofle_right`, `settings_reset`).
+
+**Pinned versions** for reproducible builds (`config/west.yml`):
+ZMK `v0.3`, and the [codekeeb/zmk-nice-oled] fork `selectable` branch.
+
+### Flashing
+
+Double-tap reset → USB drive → copy the `.uf2`. After firmware changes
+with weird state: `settings_reset` on both halves and reflash.
+
+> The full ZMK fork this repo used to be lives on the `develop` branch and
+> the `pre-restructure-backup` tag. `main` is now a clean user-config.
+
+---
+
+## Credits
+
+- RGB engine based on [zmk-rgb-fx] by Kuba Birecki (MIT) — heavily modified.
+- Displays based on [mctechnology17/zmk-nice-oled] (MIT) — via our own fork.
+- Sofle RGB by Dane Evans, original by [josefadamcik](https://josefadamcik.github.io/SofleKeyboard/).
+- [ZMK Firmware](https://zmk.dev) `v0.3`.
+
+[zmk-rgb-fx]: https://github.com/crystalplanet/zmk-rgb-fx
+[codekeeb/zmk-nice-oled]: https://github.com/codekeeb/zmk-nice-oled/tree/selectable
+[mctechnology17/zmk-nice-oled]: https://github.com/mctechnology17/zmk-nice-oled
