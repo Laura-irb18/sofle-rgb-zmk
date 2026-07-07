@@ -1,9 +1,13 @@
 /*
- * RGB FX - left half (Sofle MX, 36 LEDs: per-key + underglow).
+ * RGB FX - left half (Sofle MX, 36 LEDs).
  *
- * PROVISIONAL LED MAP: chain order is a placeholder (standard Sofle RGB
- * serpentine + underglow). Update the (x,y) coordinates from the actual
- * PCB photo so ripple/gradients match the physical layout.
+ * Chain order (from the PCB photo, josefadamcik Sofle RGB v4):
+ *   LED 1  = encoder indicator
+ *   LED 2-7  = underglow (drop lighting)
+ *   LED 8-36 = per-key (underlighting)
+ * pixel index i in this array = chain position (LED i+1). Coordinates on
+ * the continuous canvas: left half x 0-117, y 0-90 (x grows toward the
+ * inside).
  */
 
 #include <rgb_fx.dtsi>
@@ -19,44 +23,42 @@
         drivers = <&led_strip>;
         chain-lengths = <36>;
         pixels
-            = <&pixel 0 80>, /*  0 perkey c0 r4 */
-              <&pixel 0 60>, /*  1 perkey c0 r3 */
-              <&pixel 0 40>, /*  2 perkey c0 r2 */
-              <&pixel 0 20>, /*  3 perkey c0 r1 */
-              <&pixel 0 0>, /*  4 perkey c0 r0 */
-              <&pixel 20 0>, /*  5 perkey c1 r0 */
-              <&pixel 20 20>, /*  6 perkey c1 r1 */
-              <&pixel 20 40>, /*  7 perkey c1 r2 */
-              <&pixel 20 60>, /*  8 perkey c1 r3 */
-              <&pixel 20 80>, /*  9 perkey c1 r4 */
-              <&pixel 40 80>, /* 10 perkey c2 r4 */
-              <&pixel 40 60>, /* 11 perkey c2 r3 */
-              <&pixel 40 40>, /* 12 perkey c2 r2 */
-              <&pixel 40 20>, /* 13 perkey c2 r1 */
-              <&pixel 40 0>, /* 14 perkey c2 r0 */
-              <&pixel 60 0>, /* 15 perkey c3 r0 */
-              <&pixel 60 20>, /* 16 perkey c3 r1 */
-              <&pixel 60 40>, /* 17 perkey c3 r2 */
-              <&pixel 60 60>, /* 18 perkey c3 r3 */
-              <&pixel 60 80>, /* 19 perkey c3 r4 */
-              <&pixel 80 80>, /* 20 perkey c4 r4 */
-              <&pixel 80 60>, /* 21 perkey c4 r3 */
-              <&pixel 80 40>, /* 22 perkey c4 r2 */
-              <&pixel 80 20>, /* 23 perkey c4 r1 */
-              <&pixel 80 0>, /* 24 perkey c4 r0 */
-              <&pixel 100 0>, /* 25 perkey c5 r0 */
-              <&pixel 100 20>, /* 26 perkey c5 r1 */
-              <&pixel 100 40>, /* 27 perkey c5 r2 */
-              <&pixel 100 60>, /* 28 perkey c5 r3 */
-              <&pixel 100 80>, /* 29 perkey c5 r4 */
-              <&pixel 0 95>, /* 30 underglow 0 */
-              <&pixel 20 95>, /* 31 underglow 1 */
-              <&pixel 40 95>, /* 32 underglow 2 */
-              <&pixel 60 95>, /* 33 underglow 3 */
-              <&pixel 80 95>, /* 34 underglow 4 */
-              <&pixel 100 95>; /* 35 underglow 5 */
-        /* key-pixels omitted (default 1:1) until the real map is known;
-         * ripple uses key position -> pixel identity for now. */
+            = <&pixel 3 4>, /*  0 = LED#1 encoder indicator */
+              <&pixel 98 20>, /*  1 = LED#2 underglow 1 */
+              <&pixel 59 14>, /*  2 = LED#3 underglow 2 */
+              <&pixel 21 19>, /*  3 = LED#4 underglow 3 */
+              <&pixel 9 82>, /*  4 = LED#5 underglow 4 */
+              <&pixel 52 79>, /*  5 = LED#6 underglow 5 */
+              <&pixel 87 80>, /*  6 = LED#7 underglow 6 */
+              <&pixel 78 78>, /*  7 = LED#8 per-key */
+              <&pixel 117 63>, /*  8 = LED#9 per-key */
+              <&pixel 117 46>, /*  9 = LED#10 per-key */
+              <&pixel 117 26>, /* 10 = LED#11 per-key */
+              <&pixel 117 6>, /* 11 = LED#12 per-key */
+              <&pixel 98 6>, /* 12 = LED#13 per-key */
+              <&pixel 98 26>, /* 13 = LED#14 per-key */
+              <&pixel 98 44>, /* 14 = LED#15 per-key */
+              <&pixel 98 63>, /* 15 = LED#16 per-key */
+              <&pixel 59 76>, /* 16 = LED#17 per-key */
+              <&pixel 39 78>, /* 17 = LED#18 per-key */
+              <&pixel 78 59>, /* 18 = LED#19 per-key */
+              <&pixel 78 39>, /* 19 = LED#20 per-key */
+              <&pixel 78 20>, /* 20 = LED#21 per-key */
+              <&pixel 78 4>, /* 21 = LED#22 per-key */
+              <&pixel 59 0>, /* 22 = LED#23 per-key */
+              <&pixel 59 19>, /* 23 = LED#24 per-key */
+              <&pixel 59 39>, /* 24 = LED#25 per-key */
+              <&pixel 59 59>, /* 25 = LED#26 per-key */
+              <&pixel 17 83>, /* 26 = LED#27 per-key */
+              <&pixel 0 90>, /* 27 = LED#28 per-key */
+              <&pixel 39 62>, /* 28 = LED#29 per-key */
+              <&pixel 39 41>, /* 29 = LED#30 per-key */
+              <&pixel 39 21>, /* 30 = LED#31 per-key */
+              <&pixel 39 2>, /* 31 = LED#32 per-key */
+              <&pixel 21 4>, /* 32 = LED#33 per-key */
+              <&pixel 21 23>, /* 33 = LED#34 per-key */
+              <&pixel 21 42>, /* 34 = LED#35 per-key */
+              <&pixel 21 62>; /* 35 = LED#36 per-key */
     };
 
     fx_gradient: fx_gradient {
