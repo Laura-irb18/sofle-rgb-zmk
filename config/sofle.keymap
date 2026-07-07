@@ -7,7 +7,7 @@
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
-#include <dt-bindings/zmk/rgb.h>
+#include <dt-bindings/zmk/rgb_fx.h>
 #include <dt-bindings/zmk/ext_power.h>
 
 #define BASE 0
@@ -96,11 +96,11 @@
 //                    |         |         |         |         |         | |      |      |      |       |      |
             display-name = "adjust";
             bindings = <
-&bt BT_CLR        &bt BT_SEL 0    &bt BT_SEL 1    &bt BT_SEL 2    &bt BT_SEL 3    &bt BT_SEL 4                            &none &none &none &none &none &none
-&ext_power EP_TOG &rgb_ug RGB_HUD &rgb_ug RGB_HUI &rgb_ug RGB_SAD &rgb_ug RGB_SAI &rgb_ug RGB_EFF                         &none &none &none &none &none &none
-&none             &rgb_ug RGB_BRD &rgb_ug RGB_BRI &none           &none           &none                                   &none &none &none &none &none &none
-&none             &none           &none           &none           &none           &none            &rgb_ug RGB_TOG &none  &none &none &none &none &none &none
-                                  &none           &none           &none           &none            &none           &none  &none &none &none &none
+&bt BT_CLR        &bt BT_SEL 0            &bt BT_SEL 1             &bt BT_SEL 2          &bt BT_SEL 3            &bt BT_SEL 4                                          &none &none &none &none &none &none
+&ext_power EP_TOG &rgbfx RGBFX_HUE_DOWN(0) &rgbfx RGBFX_HUE_UP(0)   &rgbfx RGBFX_SPD_DOWN(0) &rgbfx RGBFX_SPD_UP(0) &rgbfx RGBFX_NEXT(0)                              &none &none &none &none &none &none
+&none             &rgbfx RGBFX_DIM(0)      &rgbfx RGBFX_BRIGHTEN(0) &none                &none                  &none                                                &none &none &none &none &none &none
+&none             &none                   &none                    &none                &none                  &none                &rgbfx RGBFX_TOGGLE(0) &none         &none &none &none &none &none &none
+                                          &none                    &none                &none                  &none                &none                &none         &none &none &none &none
             >;
         };
 

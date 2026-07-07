@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MIT
+
+DT_COMPAT_CODEKEEB_BATTERY_NRF_VDDH_CURVE := codekeeb,battery-nrf-vddh-curve
+
+config CODEKEEB_BATTERY_NRF_VDDH_CURVE
+    bool
+    default $(dt_compat_enabled,$(DT_COMPAT_CODEKEEB_BATTERY_NRF_VDDH_CURVE))
+    select ADC
+    select ZMK_BATTERY
+    depends on SENSOR
+    help
+      Driver de bateria por VDDH del nRF52 con curva de descarga LiPo
+      realista en lugar de la aproximacion lineal de ZMK.
+
+# --- RGB FX (efectos de animacion, codigo vendorizado de zmk-rgb-fx, MIT) ---
+
+config ZMK_RGB_FX
+    bool "RGB animation effects"
+    depends on LED_STRIP
+    help
+      Sistema de animaciones RGB (ripple, sparkle, gradient, solid)
+      que sustituye al underglow estandar de ZMK.
+
+config ZMK_RGB_FX_FPS
+    int "RGB effect FPS"
+    range 1 60
+    default 30
+    depends on ZMK_RGB_FX
+
+config ZMK_RGB_FX_PIXEL_DISTANCE
+    bool "Pixel distance lookup table"
+    default y
+    depends on ZMK_RGB_FX
+    help
+      Tabla de distancias entre pixeles usada por el efecto ripple.

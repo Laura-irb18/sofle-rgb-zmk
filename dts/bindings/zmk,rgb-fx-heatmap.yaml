@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+
+description: |
+  Keys light up when pressed and fade out, leaving a typing trail.
+
+compatible: "zmk,rgb-fx-heatmap"
+
+include: rgb-fx-base.yaml
+
+properties:
+  color:
+    type: int
+    required: true
+    description: Glow color in HSL format.
+
+  duration:
+    type: int
+    default: 1200
+    description: Fade-out time in milliseconds.

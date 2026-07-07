@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2024 Kuba Birecki
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/ {
+    behaviors {
+        /omit-if-no-ref/ rgbfx: rgbfx {
+            compatible = "zmk,behavior-rgb-fx";
+            #binding-cells = <1>;
+        };
+
+        /* Internal central->peripheral relay for the per-layer tint. */
+        rgblay: rgblay {
+            compatible = "zmk,behavior-rgb-fx-layer";
+            #binding-cells = <1>;
+        };
+    };
+
+    /omit-if-no-ref/ pixel: rgb_fx_pixel {
+        compatible = "zmk,rgb-fx-pixel";
+        #pixel-cells = <2>;
+    };
+};

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MIT
+
+description: Battery SoC monitoring using nRF VDDH with a realistic LiPo discharge curve
+
+compatible: "codekeeb,battery-nrf-vddh-curve"

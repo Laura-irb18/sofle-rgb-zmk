@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+
+description: Internal split relay for per-layer RGB tint (not for keymaps)
+
+compatible: "zmk,behavior-rgb-fx-layer"
+
+include: one_param.yaml
