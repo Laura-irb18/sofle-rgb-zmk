@@ -1,5 +1,0 @@
-board:
-  extend: nice_nano
-  variants:
-    - name: zmk
-      qualifier: nrf52840

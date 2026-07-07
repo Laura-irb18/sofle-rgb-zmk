@@ -1,5 +1,0 @@
-board:
-  extend: proton_c
-  variants:
-    - name: zmk
-      qualifier: stm32f303xc

@@ -1,8 +1,0 @@
-# Copyright (c) 2021 The ZMK Contributors
-# SPDX-License-Identifier: MIT
-
-if DISPLAY
-
-rsource "Kconfig.il0323"
-
-endif # DISPLAY

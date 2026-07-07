@@ -1,5 +1,0 @@
-board:
-  extend: blackpill_f401cc
-  variants:
-    - name: zmk
-      qualifier: stm32f401xc

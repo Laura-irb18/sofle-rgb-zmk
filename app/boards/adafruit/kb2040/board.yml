@@ -1,5 +1,0 @@
-board:
-  extend: adafruit_kb2040
-  variants:
-    - name: zmk
-      qualifier: rp2040

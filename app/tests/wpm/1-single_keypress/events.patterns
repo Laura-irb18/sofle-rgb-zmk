@@ -1,2 +1,0 @@
-s/.*wpm_work_handler: //p
-s/.*wpm_event_listener: //p

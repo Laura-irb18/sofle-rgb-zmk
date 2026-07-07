@@ -1,3 +1,0 @@
-./ble_test_central.exe -d=2
-./tests_ble_split_multiple-peripherals_peripheral1.exe -d=3
-./tests_ble_split_multiple-peripherals_peripheral2.exe -d=4

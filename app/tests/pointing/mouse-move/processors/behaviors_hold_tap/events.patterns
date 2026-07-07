@@ -1,2 +1,0 @@
-s/.*hid_mouse_//p
-s/.*hid_listener_keycode_//p

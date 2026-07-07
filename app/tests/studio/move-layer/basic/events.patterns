@@ -1,3 +1,0 @@
-s/.*layer_changed/layer_changed/p
-s/.*hid_listener_keycode_//p
-s/.*on_move_layer_binding_pressed/move_layer/p
