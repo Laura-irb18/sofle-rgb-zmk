@@ -2,10 +2,16 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
+    - name: codekeeb
+      url-base: https://github.com/codekeeb
   projects:
     - name: zmk
       remote: zmkfirmware
       revision: v0.3
       import: app/west.yml
+    # Fork with runtime animation selection (behavior &oledanim) + graphic battery
+    - name: zmk-nice-oled
+      remote: codekeeb
+      revision: selectable
   self:
     path: config

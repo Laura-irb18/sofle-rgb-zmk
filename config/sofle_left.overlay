@@ -92,9 +92,60 @@
         duration = <12>;
     };
 
+
+    fx_fire: fx_fire {
+        compatible = "zmk,rgb-fx-linear-gradient";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        colors = <HSL(0, 100, 45) HSL(25, 100, 50) HSL(45, 100, 55)>;
+        angle = <90>;
+        duration = <4>;
+    };
+
+    fx_ocean: fx_ocean {
+        compatible = "zmk,rgb-fx-linear-gradient";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        colors = <HSL(210, 100, 45) HSL(180, 100, 50) HSL(150, 90, 45)>;
+        angle = <0>;
+        duration = <15>;
+    };
+
+    fx_gold: fx_gold {
+        compatible = "zmk,rgb-fx-sparkle";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        colors = <HSL(40, 100, 55) HSL(55, 100, 65)>;
+        duration = <2>;
+    };
+
+    fx_pink: fx_pink {
+        compatible = "zmk,rgb-fx-ripple";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        color = <HSL(320, 100, 55)>;
+        duration = <500>;
+        ripple-width = <35>;
+        buffer-size = <12>;
+    };
+
+    fx_sunset: fx_sunset {
+        compatible = "zmk,rgb-fx-linear-gradient";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        colors = <HSL(25, 100, 50) HSL(355, 100, 50) HSL(330, 100, 50)
+                  HSL(285, 100, 50) HSL(235, 100, 50)>;
+        angle = <0>;
+        gradient-width = <300>;
+        duration = <0>;
+    };
+
+    fx_heatmap: fx_heatmap {
+        compatible = "zmk,rgb-fx-heatmap";
+        pixels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35>;
+        color = <HSL(190, 100, 55)>;
+        duration = <1200>;
+    };
+
     fx_group: fx_group {
         compatible = "zmk,rgb-fx-control-group";
-        fx = <&fx_gradient &fx_ripple &fx_sparkle &fx_solid>;
+        fx = <&fx_gradient &fx_ripple &fx_sparkle &fx_solid
+              &fx_fire &fx_ocean &fx_gold &fx_pink &fx_sunset &fx_heatmap>;
         brightness-steps = <5>;
     };
 };

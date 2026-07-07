@@ -26,6 +26,26 @@
         };
     };
 
+    behaviors {
+        // Cycles the right OLED animation (gem/cat/head/spaceman/pokemon/logo)
+        oledanim: oledanim {
+            compatible = "zmk,behavior-oled-anim";
+            #binding-cells = <0>;
+        };
+
+        // Encoders as RGB controls (clockwise = first binding)
+        rgbenc_m: rgbenc_m { // adjust + left encoder: mode
+            compatible = "zmk,behavior-sensor-rotate";
+            #sensor-binding-cells = <0>;
+            bindings = <&rgbfx RGBFX_NEXT(0)>, <&rgbfx RGBFX_PREVIOUS(0)>;
+        };
+        rgbenc_h: rgbenc_h { // adjust + right encoder: hue
+            compatible = "zmk,behavior-sensor-rotate";
+            #sensor-binding-cells = <0>;
+            bindings = <&rgbfx RGBFX_HUE_UP(0)>, <&rgbfx RGBFX_HUE_DOWN(0)>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
@@ -99,9 +119,11 @@
 &bt BT_CLR        &bt BT_SEL 0            &bt BT_SEL 1             &bt BT_SEL 2          &bt BT_SEL 3            &bt BT_SEL 4                                          &none &none &none &none &none &none
 &ext_power EP_TOG &rgbfx RGBFX_HUE_DOWN(0) &rgbfx RGBFX_HUE_UP(0)   &rgbfx RGBFX_SPD_DOWN(0) &rgbfx RGBFX_SPD_UP(0) &rgbfx RGBFX_NEXT(0)                              &none &none &none &none &none &none
 &none             &rgbfx RGBFX_DIM(0)      &rgbfx RGBFX_BRIGHTEN(0) &none                &none                  &none                                                &none &none &none &none &none &none
-&none             &none                   &none                    &none                &none                  &none                &rgbfx RGBFX_TOGGLE(0) &none         &none &none &none &none &none &none
+&none             &none                   &none                    &none                &none                  &none                &rgbfx RGBFX_TOGGLE(0) &oledanim     &none &none &none &none &none &none
                                           &none                    &none                &none                  &none                &none                &none         &none &none &none &none
             >;
+
+            sensor-bindings = <&rgbenc_m &rgbenc_h>;
         };
 
     };
