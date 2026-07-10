@@ -7,13 +7,11 @@
  *   LED 8-36 = per-key (underlighting)
  * pixel index i in this array = chain position (LED i+1).
  *
- * WARNING - MIRRORED MAP (confirmed on hardware via the BT panel test):
- * the PCB photo used to build this map showed the BACK side, so x runs
- * the OPPOSITE way to the comment that used to be here: on this half
- * x=117 is the OUTER (pinky) column and x=21 the INNER one; the thumbs
- * (x 0-78) sit on the inner side. Distances stay correct (a mirror is an
- * isometry) so positional effects are unaffected, but any key->pixel
- * lookup must use this real orientation.
+ * Coordinates use the continuous canvas, hardware-confirmed orientation:
+ * left half x 0 (outer/pinky) to 117 (inner edge), y 0 (top) to 90
+ * (bottom). The original map read from the PCB photo (back side) was
+ * mirrored; x was flipped (x' = 117 - x) after verifying the real
+ * orientation on hardware with the BT panel indicator.
  *
  * key-pixels: pixel index for each of the 60 positions of the Sofle
  * matrix transform (rows of 12/12/12/14/10; row 4 includes both encoder
@@ -34,42 +32,42 @@
         drivers = <&led_strip>;
         chain-lengths = <36>;
         pixels
-            = <&pixel 3 4>, /*  0 = LED#1 encoder indicator */
-              <&pixel 98 20>, /*  1 = LED#2 underglow 1 */
-              <&pixel 59 14>, /*  2 = LED#3 underglow 2 */
-              <&pixel 21 19>, /*  3 = LED#4 underglow 3 */
-              <&pixel 9 82>, /*  4 = LED#5 underglow 4 */
-              <&pixel 52 79>, /*  5 = LED#6 underglow 5 */
-              <&pixel 87 80>, /*  6 = LED#7 underglow 6 */
-              <&pixel 78 78>, /*  7 = LED#8 per-key */
-              <&pixel 117 63>, /*  8 = LED#9 per-key */
-              <&pixel 117 46>, /*  9 = LED#10 per-key */
-              <&pixel 117 26>, /* 10 = LED#11 per-key */
-              <&pixel 117 6>, /* 11 = LED#12 per-key */
-              <&pixel 98 6>, /* 12 = LED#13 per-key */
-              <&pixel 98 26>, /* 13 = LED#14 per-key */
-              <&pixel 98 44>, /* 14 = LED#15 per-key */
-              <&pixel 98 63>, /* 15 = LED#16 per-key */
-              <&pixel 59 76>, /* 16 = LED#17 per-key */
-              <&pixel 39 78>, /* 17 = LED#18 per-key */
-              <&pixel 78 59>, /* 18 = LED#19 per-key */
-              <&pixel 78 39>, /* 19 = LED#20 per-key */
-              <&pixel 78 20>, /* 20 = LED#21 per-key */
-              <&pixel 78 4>, /* 21 = LED#22 per-key */
-              <&pixel 59 0>, /* 22 = LED#23 per-key */
-              <&pixel 59 19>, /* 23 = LED#24 per-key */
-              <&pixel 59 39>, /* 24 = LED#25 per-key */
-              <&pixel 59 59>, /* 25 = LED#26 per-key */
-              <&pixel 17 83>, /* 26 = LED#27 per-key */
-              <&pixel 0 90>, /* 27 = LED#28 per-key */
-              <&pixel 39 62>, /* 28 = LED#29 per-key */
-              <&pixel 39 41>, /* 29 = LED#30 per-key */
-              <&pixel 39 21>, /* 30 = LED#31 per-key */
-              <&pixel 39 2>, /* 31 = LED#32 per-key */
-              <&pixel 21 4>, /* 32 = LED#33 per-key */
-              <&pixel 21 23>, /* 33 = LED#34 per-key */
-              <&pixel 21 42>, /* 34 = LED#35 per-key */
-              <&pixel 21 62>; /* 35 = LED#36 per-key */
+            = <&pixel 114 4>, /*  0 = LED#1 encoder indicator (inner) */
+              <&pixel 19 20>, /*  1 = LED#2 underglow 1 */
+              <&pixel 58 14>, /*  2 = LED#3 underglow 2 */
+              <&pixel 96 19>, /*  3 = LED#4 underglow 3 */
+              <&pixel 108 82>, /*  4 = LED#5 underglow 4 */
+              <&pixel 65 79>, /*  5 = LED#6 underglow 5 */
+              <&pixel 30 80>, /*  6 = LED#7 underglow 6 */
+              <&pixel 39 78>, /*  7 = LED#8 thumb GUI (outermost) */
+              <&pixel 0 63>, /*  8 = LED#9 pinky col row3 */
+              <&pixel 0 46>, /*  9 = LED#10 pinky col row2 */
+              <&pixel 0 26>, /* 10 = LED#11 pinky col row1 */
+              <&pixel 0 6>, /* 11 = LED#12 pinky col row0 (BT_CLR) */
+              <&pixel 19 6>, /* 12 = LED#13 col1 row0 */
+              <&pixel 19 26>, /* 13 = LED#14 col1 row1 */
+              <&pixel 19 44>, /* 14 = LED#15 col1 row2 */
+              <&pixel 19 63>, /* 15 = LED#16 col1 row3 */
+              <&pixel 58 76>, /* 16 = LED#17 thumb ALT */
+              <&pixel 78 78>, /* 17 = LED#18 thumb CTRL */
+              <&pixel 39 59>, /* 18 = LED#19 col2 row3 */
+              <&pixel 39 39>, /* 19 = LED#20 col2 row2 */
+              <&pixel 39 20>, /* 20 = LED#21 col2 row1 */
+              <&pixel 39 4>, /* 21 = LED#22 col2 row0 */
+              <&pixel 58 0>, /* 22 = LED#23 col3 row0 */
+              <&pixel 58 19>, /* 23 = LED#24 col3 row1 */
+              <&pixel 58 39>, /* 24 = LED#25 col3 row2 */
+              <&pixel 58 59>, /* 25 = LED#26 col3 row3 */
+              <&pixel 100 83>, /* 26 = LED#27 thumb LOWER */
+              <&pixel 117 90>, /* 27 = LED#28 thumb ENTER (innermost) */
+              <&pixel 78 62>, /* 28 = LED#29 col4 row3 */
+              <&pixel 78 41>, /* 29 = LED#30 col4 row2 */
+              <&pixel 78 21>, /* 30 = LED#31 col4 row1 */
+              <&pixel 78 2>, /* 31 = LED#32 col4 row0 */
+              <&pixel 96 4>, /* 32 = LED#33 inner col row0 */
+              <&pixel 96 23>, /* 33 = LED#34 inner col row1 */
+              <&pixel 96 42>, /* 34 = LED#35 inner col row2 */
+              <&pixel 96 62>; /* 35 = LED#36 inner col row3 */
         key-pixels
             = <11 12 21 22 31 32 32 32 32 32 32 32
                10 13 20 23 30 33 33 33 33 33 33 33

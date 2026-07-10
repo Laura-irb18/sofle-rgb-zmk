@@ -66,12 +66,11 @@ From the josefadamcik Sofle RGB v4 PCB:
 - **LED 2-7** = underglow (drop lighting)
 - **LED 8-36** = per-key (underlighting)
 
-The overlays hold the (x,y) of each LED read from the PCB photo, so
-positional effects follow the physical layout. **Note:** the photo showed
-the back of the PCB, so the map is mirrored left/right (x runs outward,
-not inward). Distances are unaffected (a mirror is an isometry); the
-key→pixel tables in the overlays and `layer_color.c` already use the
-real, hardware-confirmed orientation.
+The overlays hold the (x,y) of each LED, so positional effects follow the
+physical layout. The map was originally read from a photo of the **back**
+of the PCB (mirrored); after confirming the real orientation on hardware,
+both the x coordinates and every key→pixel table (overlays and
+`layer_color.c`) now use the true left/right orientation.
 
 ### Modes (cycle with LOWER + left encoder, or LOWER + T)
 
