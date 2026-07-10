@@ -5,9 +5,15 @@
  *   LED 1  = encoder indicator
  *   LED 2-7  = underglow (drop lighting)
  *   LED 8-36 = per-key (underlighting)
- * pixel index i in this array = chain position (LED i+1). Coordinates on
- * the continuous canvas: left half x 0-117, y 0-90 (x grows toward the
- * inside).
+ * pixel index i in this array = chain position (LED i+1).
+ *
+ * WARNING - MIRRORED MAP (confirmed on hardware via the BT panel test):
+ * the PCB photo used to build this map showed the BACK side, so x runs
+ * the OPPOSITE way to the comment that used to be here: on this half
+ * x=117 is the OUTER (pinky) column and x=21 the INNER one; the thumbs
+ * (x 0-78) sit on the inner side. Distances stay correct (a mirror is an
+ * isometry) so positional effects are unaffected, but any key->pixel
+ * lookup must use this real orientation.
  *
  * key-pixels: pixel index for each of the 60 positions of the Sofle
  * matrix transform (rows of 12/12/12/14/10; row 4 includes both encoder
@@ -65,11 +71,11 @@
               <&pixel 21 42>, /* 34 = LED#35 per-key */
               <&pixel 21 62>; /* 35 = LED#36 per-key */
         key-pixels
-            = <32 31 22 21 12 11 11 11 11 11 11 11
-               33 30 23 20 13 10 10 10 10 10 10 10
-               34 29 24 19 14  9  9  9  9  9  9  9
-               35 28 25 18 15  8  0  8  8  8  8  8  8  8
-               27 26 17 16  7  7  7  7  7  7>;
+            = <11 12 21 22 31 32 32 32 32 32 32 32
+               10 13 20 23 30 33 33 33 33 33 33 33
+                9 14 19 24 29 34 34 34 34 34 34 34
+                8 15 18 25 28 35  0 35 35 35 35 35 35 35
+                7 16 17 26 27 27 27 27 27 27>;
     };
 
     fx_gradient: fx_gradient {

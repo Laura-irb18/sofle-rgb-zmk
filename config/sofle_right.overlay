@@ -1,10 +1,12 @@
 /*
  * RGB FX - right half (Sofle MX, 36 LEDs).
  *
- * Mirror of sofle_left.overlay across the continuous canvas (right half
- * x 123-240) so horizontal gradients cross the seam without a jump.
+ * Mirror of sofle_left.overlay (right half x 123-240).
  * Chain order: LED 1 = encoder indicator, 2-7 = underglow, 8-36 = per-key.
- * See sofle_left.overlay for the pixels/key-pixels map explanation.
+ *
+ * WARNING - MIRRORED MAP, like the left half (see sofle_left.overlay):
+ * on this half x=123 is the OUTER column and x=219 the INNER one; the
+ * thumbs (x 162-240) sit on the inner side.
  */
 
 #include <rgb_fx.dtsi>
@@ -57,11 +59,11 @@
               <&pixel 219 42>, /* 34 = LED#35 per-key */
               <&pixel 219 62>; /* 35 = LED#36 per-key */
         key-pixels
-            = <11 11 11 11 11 11 11 12 21 22 31 32
-               10 10 10 10 10 10 10 13 20 23 30 33
-                9  9  9  9  9  9  9 14 19 24 29 34
-                8  8  8  8  8  8  8  0  8 15 18 25 28 35
-                7  7  7  7  7  7 16 17 26 27>;
+            = <32 32 32 32 32 32 32 31 22 21 12 11
+               33 33 33 33 33 33 33 30 23 20 13 10
+               34 34 34 34 34 34 34 29 24 19 14  9
+               35 35 35 35 35 35 35  0 35 28 25 18 15  8
+               27 27 27 27 27 27 26 17 16  7>;
     };
 
     fx_gradient: fx_gradient {
