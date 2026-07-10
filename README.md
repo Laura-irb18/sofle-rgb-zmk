@@ -104,8 +104,22 @@ heatmap modes to hit the right LED) in both `config/sofle_*.overlay` files.
 
 - **Hue**: a 0-359° offset applied in the HSL→RGB conversion — rotates the
   full palette of any mode without destroying it. 20° steps.
-- **Brightness**: 5 steps (minimum 1: turning off is the toggle's job).
+- **Brightness**: 4 steps — 10 / 40 / 70 / 100% (minimum 10%: turning off
+  is the toggle's job).
 - **Speed**: 5 steps (0.25×–4×) scaling the animation tick period.
+
+### Power-aware defaults (RGB follows the cable)
+
+Each half watches **its own USB port**:
+
+- **On battery** the RGB starts **OFF**. Turning it on manually comes up
+  at **10%** brightness (raise it with RAISE + left encoder).
+- **Plugging in USB power** (PC or charger) turns the RGB **ON at 100%**.
+- **Unplugging the cable** turns the RGB **OFF** again.
+
+The on/off state is no longer restored from flash — the power source
+decides at every boot. Mode, hue, speed and the OLED animation still
+persist.
 
 ### Editing palettes and speeds
 

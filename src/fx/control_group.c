@@ -18,7 +18,35 @@
 #include <zmk/rgb_fx.h>
 #include <zmk/rgb_fx_control_group.h>
 
+#if IS_ENABLED(CONFIG_ZMK_USB)
+#include <zmk/event_manager.h>
+#include <zmk/events/usb_conn_state_changed.h>
+#include <zmk/usb.h>
+#endif
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+/* Each half reacts to ITS OWN USB port: RGB defaults to OFF on battery
+ * and ON at 100% while USB power is present (see the usb listener at the
+ * bottom). A manual toggle while on battery comes up at 10%. */
+static bool fx_control_group_usb_powered(void) {
+#if IS_ENABLED(CONFIG_ZMK_USB)
+    return zmk_usb_is_powered();
+#else
+    return false;
+#endif
+}
+
+/* Brightness curve: the lowest step is 10% (battery default, barely sips
+ * power); the remaining steps spread evenly up to 100%. With the default
+ * 4 usable steps: 10 / 40 / 70 / 100%. */
+static float fx_control_group_brightness_scale(uint8_t brightness, uint8_t steps) {
+    if (brightness >= steps) {
+        return 1.0f;
+    }
+
+    return 0.1f + (0.9f * (float)(brightness - 1) / (float)(steps - 1));
+}
 
 #define PHANDLE_TO_DEVICE(node_id, prop, idx) DEVICE_DT_GET(DT_PHANDLE_BY_IDX(node_id, prop, idx)),
 
@@ -69,6 +97,11 @@ static int fx_control_group_load_settings(const struct device *dev, const char *
             if (data->current_fx_idx >= config->fx_size) {
                 data->current_fx_idx = 0;
             }
+            /* Never restore the saved on/off state: the power source
+             * decides at boot. The USB listener turns the RGB on when
+             * the cable is (or gets) plugged; on battery it stays off
+             * until the user toggles it. */
+            data->active = false;
             return 0;
         }
 
@@ -116,6 +149,9 @@ int zmk_rgb_fx_control_handle_command(const struct device *dev, uint8_t command,
         data->active = !data->active;
 
         if (data->active) {
+            /* Manual power-on default: 100% on USB power, 10% on battery
+             * (the encoder can raise it afterwards). */
+            data->brightness = fx_control_group_usb_powered() ? config->brightness_steps : 1;
             rgb_fx_start(config->fx[data->current_fx_idx]);
             break;
         }
@@ -237,7 +273,8 @@ static void fx_control_group_render_frame(const struct device *dev, struct rgb_f
         return;
     }
 
-    float brightness = (float)data->brightness / (float)config->brightness_steps;
+    float brightness =
+        fx_control_group_brightness_scale(data->brightness, config->brightness_steps);
 
     for (size_t i = 0; i < num_pixels; ++i) {
         pixels[i].value.r *= brightness;
@@ -316,10 +353,10 @@ static const struct rgb_fx_api fx_control_group_api = {
     };                                                                                             \
                                                                                                    \
     static struct fx_control_group_data fx_control_group_##idx##_data = {                          \
-        .active = true,                                                                            \
-        /* Low initial brightness: 30 LEDs at full power draw ~500 mA, the   \
-         * rail collapses and the WS2812 reset (they go black). The          \
-         * historic underglow of this keyboard started at 10%. */            \
+        /* OFF by default: the USB listener turns it on (at 100%) when     \
+         * cable power is present; on battery the user toggles it on at    \
+         * the 10% step. Also keeps 36 LEDs from slamming the rail at boot. */ \
+        .active = false,                                                                           \
         .brightness = 1,                                                                           \
         .current_fx_idx = 0,                                                                       \
         .speed_step = 2, /* 1x */                                                                  \
@@ -330,3 +367,44 @@ static const struct rgb_fx_api fx_control_group_api = {
                           CONFIG_APPLICATION_INIT_PRIORITY, &fx_control_group_api);
 
 DT_INST_FOREACH_STATUS_OKAY(FX_CONTROL_GROUP_DEVICE);
+
+/* ---- USB power listener: RGB follows the cable ----
+ *
+ * Runs independently on each half (each one watches its own USB port):
+ *   - cable plugged in  -> RGB ON at 100%
+ *   - cable pulled out  -> RGB OFF
+ * This also covers boot: the USB connection event fires during startup,
+ * so a half that boots with the cable in comes up lit, and a half that
+ * boots on battery stays dark (data->active defaults to false). */
+#if IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx)
+
+static int fx_control_group_usb_listener(const zmk_event_t *eh) {
+    if (as_zmk_usb_conn_state_changed(eh) == NULL) {
+        return -ENOTSUP;
+    }
+
+    const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zmk_rgb_fx));
+    const struct fx_control_group_config *config = dev->config;
+    struct fx_control_group_data *data = dev->data;
+
+    if (zmk_usb_is_powered()) {
+        data->brightness = config->brightness_steps; /* 100% on cable power */
+
+        if (!data->active) {
+            data->active = true;
+            rgb_fx_start(config->fx[data->current_fx_idx]);
+        }
+    } else if (data->active) {
+        data->active = false;
+        rgb_fx_stop(config->fx[data->current_fx_idx]);
+    }
+
+    zmk_rgb_fx_request_frames(1);
+
+    return 0;
+}
+
+ZMK_LISTENER(fx_control_group_usb, fx_control_group_usb_listener);
+ZMK_SUBSCRIPTION(fx_control_group_usb, zmk_usb_conn_state_changed);
+
+#endif /* IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx) */

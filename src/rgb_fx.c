@@ -258,8 +258,8 @@ static int zmk_rgb_fx_on_activity_state_changed(const zmk_event_t *event) {
 }
 
 static int zmk_rgb_fx_init() {
-/* Upstream dejo este bloque comentado (y con el nombre de config antiguo),
- * dejando la tabla de distancias a cero: el ripple encendia todo a la vez. */
+/* Upstream left this block commented out (and under the old config name),
+ * leaving the distance table zeroed: the ripple lit everything at once. */
 #if defined(CONFIG_ZMK_RGB_FX_PIXEL_DISTANCE) && (CONFIG_ZMK_RGB_FX_PIXEL_DISTANCE == 1)
     // Prefill the pixel distance lookup table
     int k = 0;
