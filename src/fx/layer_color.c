@@ -3,8 +3,9 @@
  *
  * Per-layer tint: while LOWER (pink) or RAISE (purple) is active,
  * ALL thumb LEDs on both halves are painted with the warning color.
- * In RAISE the Bluetooth panel (BT_CLR red, profiles 0-4 yellow with the
- * active one green) and the IJKL arrow cluster in yellow are also shown.
+ * In LOWER the arrow cluster (right half) lights up in orange; in RAISE
+ * the Bluetooth panel is shown (BT_CLR red, profiles 0-4 yellow with the
+ * active one green).
  * Only the central half knows the layers, so the state is relayed to the
  * peripheral over the split behavior channel (behavior `rgblay`,
  * name <= 8 chars).
@@ -42,7 +43,7 @@ static const struct zmk_color_hsl layer_tint_colors[] = {
  * Thumb pixels ordered inner -> outer: 7, 16, 17, 26, 27. */
 static const uint8_t layer_tint_thumb_px[] = {7, 16, 17, 26, 27};
 
-/* Arrow cluster in raise: I(UP) J(LEFT) K(DOWN) L(RIGHT).
+/* Arrow cluster in LOWER: I(UP) J(LEFT) K(DOWN) L(RIGHT) positions.
  * Only exists on the right half (peripheral). */
 static const uint8_t layer_tint_arrow_px[] = {20, 14, 19, 24};
 
@@ -76,8 +77,8 @@ void zmk_rgb_fx_layer_color_apply(struct rgb_fx_pixel *pixels, size_t num_pixels
     }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT) && !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    /* In RAISE, light up the arrow cluster (right half only). */
-    if (layer_tint == 2) {
+    /* In LOWER, light up the arrow cluster (right half only). */
+    if (layer_tint == 1) {
         struct zmk_color_rgb flechas = tint_to_rgb(layer_tint_arrow_color);
 
         for (size_t j = 0; j < ARRAY_SIZE(layer_tint_arrow_px); j++) {

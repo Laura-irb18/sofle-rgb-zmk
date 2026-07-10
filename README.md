@@ -17,26 +17,30 @@ exist in the originals.
 
 ## ⌨️ Controls
 
-Layers: **base**, **lower**, **raise**, and **adjust** (lower + raise together).
+Same layout as the Choc variant: layers **CODE** (base), **Lower** and
+**Raise**.
 
 ### Encoders
 
-| Gesture                 | Base / Lower / Raise | ADJUST      |
-| ----------------------- | -------------------- | ----------- |
-| **Turn left encoder**   | Volume               | RGB mode ±  |
-| **Turn right encoder**  | Page Up/Down         | Hue ±       |
-| **Press right encoder** | Mute (base)          | Next OLED animation |
+| Gesture                 | Base                 | Lower               | Raise        |
+| ----------------------- | -------------------- | ------------------- | ------------ |
+| **Turn left encoder**   | Volume               | RGB mode ±          | Brightness ± |
+| **Turn right encoder**  | Fast page scroll     | Hue ±               | Speed ±      |
+| **Press left encoder**  | Mute                 | RGB on/off          | —            |
+| **Press right encoder** | Play/pause           | Next OLED animation | RGB on/off   |
 
-### RGB (ADJUST layer, left half)
+### RGB keys (LOWER, left half)
 
-| Key      | Function                     |
-| -------- | ---------------------------- |
-| HUD / HUI| Hue − / +                    |
-| SPD − / +| Speed − / +                  |
-| BRD / BRI| Brightness − / +             |
-| EFF      | Next RGB mode                |
-| TOG      | RGB on/off                   |
-| EXTPWR   | Toggle external power        |
+| Key   | Function         |
+| ----- | ---------------- |
+| R     | RGB on/off       |
+| T     | Next RGB mode    |
+| F / G | Hue − / +        |
+| V / B | Brightness − / + |
+
+RAISE also holds the **numpad** (right half), the **Bluetooth panel**
+(`BT_CLR` + profiles 1-5 on the top-left row) and clipboard keys
+(undo/cut/copy/paste). ZMK Studio unlock is on LOWER + Z.
 
 All RGB settings (mode, hue, brightness, speed, on/off) and the selected
 OLED animation **persist in flash**: they survive power cycles and
@@ -65,7 +69,7 @@ From the josefadamcik Sofle RGB v4 PCB:
 The overlays hold the real (x,y) of each LED read from the PCB photo, so
 positional effects follow the physical layout.
 
-### Modes (cycle with ADJUST + left encoder, or the EFF key)
+### Modes (cycle with LOWER + left encoder, or LOWER + T)
 
 | #  | Mode         | Description                                                 |
 | -- | ------------ | ----------------------------------------------------------- |
@@ -85,11 +89,11 @@ positional effects follow the physical layout.
 While a layer is held, fixed-color indicators are painted on top of the
 active RGB mode (they don't rotate with the hue offset):
 
-- **LOWER**: all thumb keys on both halves light up **pink**.
-- **RAISE**: all thumb keys light up **purple**, plus:
-  - **Bluetooth panel** (left half, top row): `BT_CLR` in **red**,
-    profiles 1-5 in **yellow** with the **active profile in green**.
-  - **Arrow cluster** (right half): the I/J/K/L arrows in **orange**.
+- **LOWER**: all thumb keys on both halves light up **pink**, and the
+  **arrow cluster** (right half, I/J/K/L positions) lights up in **orange**.
+- **RAISE**: all thumb keys light up **purple**, plus the **Bluetooth
+  panel** (left half, top row): `BT_CLR` in **red**, profiles 1-5 in
+  **yellow** with the **active profile in green**.
 
 The layer state is relayed to the peripheral half over the split behavior
 channel (`rgblay`), so both halves stay in sync. The key→LED lookup lives
@@ -118,7 +122,7 @@ Module: [codekeeb/zmk-nice-oled] `selectable` branch.
 - **Left (central)**: graphic battery, BT/USB output, layer, profile, and
   **Bongo Cat** banging along to your WPM.
 - **Right (peripheral)**: graphic battery + **runtime-switchable animation**
-  (ADJUST + press right encoder, persists): gem, cat, 3D head, spaceman,
+  (LOWER + press right encoder, persists): gem, cat, 3D head, spaceman,
   pokemon, CODE/KEEB logo.
 - **Graphic battery**: battery icon with proportional fill + bolt while
   charging.
