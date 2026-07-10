@@ -80,6 +80,22 @@ positional effects follow the physical layout.
 | 9  | Sunset       | **Static**: orange-coral-pink-purple-blue (S100, tight arc)  |
 | 10 | Heatmap      | Each key lights up when pressed and fades out (~1.2 s)       |
 
+### Layer indicators
+
+While a layer is held, fixed-color indicators are painted on top of the
+active RGB mode (they don't rotate with the hue offset):
+
+- **LOWER**: all thumb keys on both halves light up **pink**.
+- **RAISE**: all thumb keys light up **purple**, plus:
+  - **Bluetooth panel** (left half, top row): `BT_CLR` in **red**,
+    profiles 1-5 in **yellow** with the **active profile in green**.
+  - **Arrow cluster** (right half): the I/J/K/L arrows in **orange**.
+
+The layer state is relayed to the peripheral half over the split behavior
+channel (`rgblay`), so both halves stay in sync. The key→LED lookup lives
+in `src/fx/layer_color.c` and the `key-pixels` map (used by the ripple and
+heatmap modes to hit the right LED) in both `config/sofle_*.overlay` files.
+
 ### Global controls
 
 - **Hue**: a 0-359° offset applied in the HSL→RGB conversion — rotates the

@@ -37,12 +37,14 @@ static const struct zmk_color_hsl layer_tint_colors[] = {
     {.h = 270, .s = 100, .l = 50},  /* RAISE = purple */
 };
 
-/* All thumb LEDs (same chain indices on both halves). */
-static const uint8_t layer_tint_thumb_px[] = {5, 6, 7, 16, 17};
+/* All thumb LEDs (same chain indices on both halves).
+ * MX chain: pixel 0 = encoder, 1-6 = underglow, 7-35 = per-key.
+ * Thumb pixels ordered inner -> outer: 7, 16, 17, 26, 27. */
+static const uint8_t layer_tint_thumb_px[] = {7, 16, 17, 26, 27};
 
 /* Arrow cluster in raise: I(UP) J(LEFT) K(DOWN) L(RIGHT).
  * Only exists on the right half (peripheral). */
-static const uint8_t layer_tint_arrow_px[] = {13, 9, 14, 19};
+static const uint8_t layer_tint_arrow_px[] = {20, 14, 19, 24};
 
 /* Saturated orange-yellow for the arrows. */
 static const struct zmk_color_hsl layer_tint_arrow_color = {.h = 40, .s = 100, .l = 50};
@@ -90,8 +92,8 @@ void zmk_rgb_fx_layer_color_apply(struct rgb_fx_pixel *pixels, size_t num_pixels
     /* Bluetooth panel in RAISE: BT_CLR (top-left corner) red,
      * profiles 0-4 yellow and the ACTIVE profile green. */
     if (layer_tint == 2) {
-        static const uint8_t bt_clr_px = 29;                 /* top-left corner (BT_CLR) */
-        static const uint8_t bt_prof_px[] = {22, 21, 12, 11, 0}; /* keys 1-5 */
+        static const uint8_t bt_clr_px = 32;                 /* top-left corner (BT_CLR) */
+        static const uint8_t bt_prof_px[] = {31, 22, 21, 12, 11}; /* keys 1-5 */
 
         if (bt_clr_px < num_pixels) {
             pixels[bt_clr_px].value =
