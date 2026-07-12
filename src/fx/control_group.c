@@ -22,11 +22,6 @@
 #include <zmk/behavior.h>
 #include <zmk/event_manager.h>
 
-#if IS_ENABLED(CONFIG_ZMK_USB)
-#include <zmk/events/usb_conn_state_changed.h>
-#include <zmk/usb.h>
-#endif
-
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #include <zmk/split/central.h>
 #endif
@@ -59,27 +54,21 @@ struct fx_control_group_data {
 /*
  * STATE MODEL (assumes a single control group, the `zmk,rgb-fx` chosen):
  *
- * - SHARED state (active, mode, hue, speed, brightness): owned by the
- *   CENTRAL half. All `&rgbfx` commands run on the central only; after
- *   each one the central pushes the resulting ABSOLUTE state to the
- *   peripheral through the `rgbsync` split behavior, and re-pushes it
- *   every FX_SYNC_PERIOD as a self-heal (a peripheral that missed a
- *   message converges on the next push). Relative commands applied
- *   per-half were the source of inverted toggles and desynced modes.
+ * ALL state (active, mode, hue, speed, brightness) is SHARED and owned by
+ * the CENTRAL half. All `&rgbfx` commands run on the central only; after
+ * each one the central pushes the resulting ABSOLUTE state to the
+ * peripheral through the `rgbsync` split behavior, and re-pushes it
+ * every FX_SYNC_PERIOD as a self-heal (a peripheral that missed a
+ * message converges on the next push). Relative commands applied
+ * per-half were the source of inverted toggles and desynced modes.
  *
- * - LOCAL state (fx_usb_present): each half watches its own USB port.
- *   A USB-powered half renders ON at 100% no matter what the shared
- *   state says; `active` only drives the battery behavior. So:
- *   effective_on = active || usb, effective_brightness = usb ? max
- *   : brightness.
+ * (A per-half USB override used to force a plugged half on at 100%; it
+ * was removed at the user's request — halves rendered visibly different
+ * brightness.)
  */
-static bool fx_usb_present;
+
 /* Whether the current effect instance has been started (render loop). */
 static bool fx_running;
-
-static bool fx_control_group_effective_on(const struct fx_control_group_data *data) {
-    return data->active || fx_usb_present;
-}
 
 /* Brightness curve: the lowest step is 10% (battery default, barely sips
  * power); the remaining steps spread evenly up to 100%. With the default
@@ -92,12 +81,12 @@ static float fx_control_group_brightness_scale(uint8_t brightness, uint8_t steps
     return 0.1f + (0.9f * (float)(brightness - 1) / (float)(steps - 1));
 }
 
-/* Start/stop the current effect so it matches the effective on state. */
+/* Start/stop the current effect so it matches the active state. */
 static void fx_control_group_refresh(const struct device *dev) {
     const struct fx_control_group_config *config = dev->config;
     struct fx_control_group_data *data = dev->data;
 
-    bool want = fx_control_group_effective_on(data);
+    bool want = data->active;
 
     if (want == fx_running) {
         return;
@@ -173,10 +162,8 @@ static int fx_control_group_load_settings(const struct device *dev, const char *
             if (data->current_fx_idx >= config->fx_size) {
                 data->current_fx_idx = 0;
             }
-            /* Never restore the saved on/off state: the power source
-             * decides at boot. The USB listener turns the RGB on when
-             * the cable is (or gets) plugged; on battery it stays off
-             * until the user toggles it. */
+            /* Never restore the saved on/off state: every boot starts
+             * with the RGB off until the user toggles it on. */
             data->active = false;
             return 0;
         }
@@ -225,8 +212,8 @@ int zmk_rgb_fx_control_handle_command(const struct device *dev, uint8_t command,
         data->active = !data->active;
 
         if (data->active) {
-            /* Manual power-on: battery brightness defaults back to 10%
-             * (a USB-powered half renders at 100% regardless). */
+            /* Manual power-on: brightness defaults back to the 10% step
+             * (the encoder can raise it afterwards). */
             data->brightness = 1;
         }
         break;
@@ -306,22 +293,18 @@ static void fx_control_group_render_frame(const struct device *dev, struct rgb_f
     const struct fx_control_group_config *config = dev->config;
     const struct fx_control_group_data *data = dev->data;
 
-    if (!fx_control_group_effective_on(data)) {
+    if (!data->active) {
         return;
     }
 
     rgb_fx_render_frame(config->fx[data->current_fx_idx], pixels, num_pixels);
 
-    /* A USB-powered half always renders at 100%. */
-    uint8_t brightness_step =
-        fx_usb_present ? config->brightness_steps : data->brightness;
-
-    if (brightness_step == config->brightness_steps) {
+    if (data->brightness == config->brightness_steps) {
         return;
     }
 
     float brightness =
-        fx_control_group_brightness_scale(brightness_step, config->brightness_steps);
+        fx_control_group_brightness_scale(data->brightness, config->brightness_steps);
 
     for (size_t i = 0; i < num_pixels; ++i) {
         pixels[i].value.r *= brightness;
@@ -334,7 +317,7 @@ static void fx_control_group_start(const struct device *dev) {
     const struct fx_control_group_config *config = dev->config;
     const struct fx_control_group_data *data = dev->data;
 
-    if (!fx_control_group_effective_on(data)) {
+    if (!data->active) {
         return;
     }
 
@@ -400,9 +383,8 @@ static const struct rgb_fx_api fx_control_group_api = {
     };                                                                                             \
                                                                                                    \
     static struct fx_control_group_data fx_control_group_##idx##_data = {                          \
-        /* OFF by default: the USB listener turns it on (at 100%) when     \
-         * cable power is present; on battery the user toggles it on at    \
-         * the 10% step. Also keeps 36 LEDs from slamming the rail at boot. */ \
+        /* OFF by default: the user toggles it on (10% step). Also keeps   \
+         * 36 LEDs from slamming the rail at boot. */                      \
         .active = false,                                                                           \
         .brightness = 1,                                                                           \
         .current_fx_idx = 0,                                                                       \
@@ -414,40 +396,6 @@ static const struct rgb_fx_api fx_control_group_api = {
                           CONFIG_APPLICATION_INIT_PRIORITY, &fx_control_group_api);
 
 DT_INST_FOREACH_STATUS_OKAY(FX_CONTROL_GROUP_DEVICE);
-
-/* ---- USB power listener: RGB follows the cable ----
- *
- * Runs independently on each half (each one watches its own USB port) and
- * only updates the LOCAL fx_usb_present flag: it never touches the shared
- * state, so it can no longer make the halves diverge. This also covers
- * boot: the USB connection event fires during startup, so a half that
- * boots with the cable in comes up lit, and a half that boots on battery
- * stays dark (data->active defaults to false). */
-#if IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx)
-
-static int fx_control_group_usb_listener(const zmk_event_t *eh) {
-    if (as_zmk_usb_conn_state_changed(eh) == NULL) {
-        return -ENOTSUP;
-    }
-
-    const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zmk_rgb_fx));
-    bool powered = zmk_usb_is_powered();
-
-    if (powered == fx_usb_present) {
-        return 0;
-    }
-
-    fx_usb_present = powered;
-    fx_control_group_refresh(dev);
-    zmk_rgb_fx_request_frames(1);
-
-    return 0;
-}
-
-ZMK_LISTENER(fx_control_group_usb, fx_control_group_usb_listener);
-ZMK_SUBSCRIPTION(fx_control_group_usb, zmk_usb_conn_state_changed);
-
-#endif /* IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx) */
 
 /* ---- central: push the absolute shared state to the peripheral ----
  *
