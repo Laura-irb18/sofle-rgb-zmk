@@ -13,40 +13,25 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
 
+#include <drivers/behavior.h>
 #include <drivers/rgb_fx.h>
 
 #include <zmk/rgb_fx.h>
 #include <zmk/rgb_fx_control_group.h>
 
-#if IS_ENABLED(CONFIG_ZMK_USB)
+#include <zmk/behavior.h>
 #include <zmk/event_manager.h>
+
+#if IS_ENABLED(CONFIG_ZMK_USB)
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/usb.h>
 #endif
 
-LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
-/* Each half reacts to ITS OWN USB port: RGB defaults to OFF on battery
- * and ON at 100% while USB power is present (see the usb listener at the
- * bottom). A manual toggle while on battery comes up at 10%. */
-static bool fx_control_group_usb_powered(void) {
-#if IS_ENABLED(CONFIG_ZMK_USB)
-    return zmk_usb_is_powered();
-#else
-    return false;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#include <zmk/split/central.h>
 #endif
-}
 
-/* Brightness curve: the lowest step is 10% (battery default, barely sips
- * power); the remaining steps spread evenly up to 100%. With the default
- * 4 usable steps: 10 / 40 / 70 / 100%. */
-static float fx_control_group_brightness_scale(uint8_t brightness, uint8_t steps) {
-    if (brightness >= steps) {
-        return 1.0f;
-    }
-
-    return 0.1f + (0.9f * (float)(brightness - 1) / (float)(steps - 1));
-}
+LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #define PHANDLE_TO_DEVICE(node_id, prop, idx) DEVICE_DT_GET(DT_PHANDLE_BY_IDX(node_id, prop, idx)),
 
@@ -70,6 +55,97 @@ struct fx_control_group_data {
     uint16_t hue_offset;
     uint8_t speed_step;
 };
+
+/*
+ * STATE MODEL (assumes a single control group, the `zmk,rgb-fx` chosen):
+ *
+ * - SHARED state (active, mode, hue, speed, brightness): owned by the
+ *   CENTRAL half. All `&rgbfx` commands run on the central only; after
+ *   each one the central pushes the resulting ABSOLUTE state to the
+ *   peripheral through the `rgbsync` split behavior, and re-pushes it
+ *   every FX_SYNC_PERIOD as a self-heal (a peripheral that missed a
+ *   message converges on the next push). Relative commands applied
+ *   per-half were the source of inverted toggles and desynced modes.
+ *
+ * - LOCAL state (fx_usb_present): each half watches its own USB port.
+ *   A USB-powered half renders ON at 100% no matter what the shared
+ *   state says; `active` only drives the battery behavior. So:
+ *   effective_on = active || usb, effective_brightness = usb ? max
+ *   : brightness.
+ */
+static bool fx_usb_present;
+/* Whether the current effect instance has been started (render loop). */
+static bool fx_running;
+
+static bool fx_control_group_effective_on(const struct fx_control_group_data *data) {
+    return data->active || fx_usb_present;
+}
+
+/* Brightness curve: the lowest step is 10% (battery default, barely sips
+ * power); the remaining steps spread evenly up to 100%. With the default
+ * 4 usable steps: 10 / 40 / 70 / 100%. */
+static float fx_control_group_brightness_scale(uint8_t brightness, uint8_t steps) {
+    if (brightness >= steps) {
+        return 1.0f;
+    }
+
+    return 0.1f + (0.9f * (float)(brightness - 1) / (float)(steps - 1));
+}
+
+/* Start/stop the current effect so it matches the effective on state. */
+static void fx_control_group_refresh(const struct device *dev) {
+    const struct fx_control_group_config *config = dev->config;
+    struct fx_control_group_data *data = dev->data;
+
+    bool want = fx_control_group_effective_on(data);
+
+    if (want == fx_running) {
+        return;
+    }
+
+    if (want) {
+        rgb_fx_start(config->fx[data->current_fx_idx]);
+    } else {
+        rgb_fx_stop(config->fx[data->current_fx_idx]);
+    }
+
+    fx_running = want;
+}
+
+/* Change the current effect, restarting it if it is running. */
+static void fx_control_group_set_idx(const struct device *dev, size_t idx) {
+    const struct fx_control_group_config *config = dev->config;
+    struct fx_control_group_data *data = dev->data;
+
+    if (idx >= config->fx_size || idx == data->current_fx_idx) {
+        return;
+    }
+
+    if (fx_running) {
+        rgb_fx_stop(config->fx[data->current_fx_idx]);
+    }
+
+    data->current_fx_idx = idx;
+
+    if (fx_running) {
+        rgb_fx_start(config->fx[data->current_fx_idx]);
+    }
+}
+
+/* Packed absolute state carried in the rgbsync behavior's param1. */
+#define FX_SYNC_PACK(active, idx, hue, speed, brt)                                                 \
+    (((active) ? 1 : 0) | (((uint32_t)(idx) & 0x1f) << 1) |                                        \
+     ((((uint32_t)(hue) / 20) & 0x1f) << 6) | (((uint32_t)(speed) & 0x7) << 11) |                  \
+     (((uint32_t)(brt) & 0x7) << 14))
+#define FX_SYNC_ACTIVE(p) ((p) & 0x1)
+#define FX_SYNC_IDX(p) (((p) >> 1) & 0x1f)
+#define FX_SYNC_HUE(p) ((((p) >> 6) & 0x1f) * 20)
+#define FX_SYNC_SPEED(p) (((p) >> 11) & 0x7)
+#define FX_SYNC_BRT(p) (((p) >> 14) & 0x7)
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) && DT_HAS_CHOSEN(zmk_rgb_fx)
+static void fx_control_group_sync_push_now(void);
+#endif
 
 static int fx_control_group_load_settings(const struct device *dev, const char *name, size_t len,
                                           settings_read_cb read_cb, void *cb_arg) {
@@ -149,62 +225,26 @@ int zmk_rgb_fx_control_handle_command(const struct device *dev, uint8_t command,
         data->active = !data->active;
 
         if (data->active) {
-            /* Manual power-on default: 100% on USB power, 10% on battery
-             * (the encoder can raise it afterwards). */
-            data->brightness = fx_control_group_usb_powered() ? config->brightness_steps : 1;
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-            break;
+            /* Manual power-on: battery brightness defaults back to 10%
+             * (a USB-powered half renders at 100% regardless). */
+            data->brightness = 1;
         }
-
-        rgb_fx_stop(config->fx[data->current_fx_idx]);
         break;
-    /* Upstream didn't stop the outgoing effect nor start the incoming one on
-     * change (NEXT/PREVIOUS/SELECT): the new effect never got its
-     * on_start and stayed black until reboot. */
+    /* Upstream didn't stop the outgoing effect nor start the incoming one
+     * on change (NEXT/PREVIOUS/SELECT): set_idx handles both. */
     case RGB_FX_CMD_NEXT:
-        if (data->active) {
-            rgb_fx_stop(config->fx[data->current_fx_idx]);
-        }
-
-        data->current_fx_idx++;
-
-        if (data->current_fx_idx == config->fx_size) {
-            data->current_fx_idx = 0;
-        }
-
-        if (data->active) {
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-        }
+        fx_control_group_set_idx(dev, (data->current_fx_idx + 1) % config->fx_size);
         break;
     case RGB_FX_CMD_PREVIOUS:
-        if (data->active) {
-            rgb_fx_stop(config->fx[data->current_fx_idx]);
-        }
-
-        if (data->current_fx_idx == 0) {
-            data->current_fx_idx = config->fx_size;
-        }
-
-        data->current_fx_idx--;
-
-        if (data->active) {
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-        }
+        fx_control_group_set_idx(dev, (data->current_fx_idx + config->fx_size - 1) %
+                                          config->fx_size);
         break;
     case RGB_FX_CMD_SELECT:
         if (config->fx_size <= param) {
             return -ENOTSUP;
         }
 
-        if (data->active) {
-            rgb_fx_stop(config->fx[data->current_fx_idx]);
-        }
-
-        data->current_fx_idx = param;
-
-        if (data->active) {
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-        }
+        fx_control_group_set_idx(dev, param);
         break;
     case RGB_FX_CMD_HUE_UP:
         zmk_rgb_fx_hue_offset = (zmk_rgb_fx_hue_offset + 20) % 360;
@@ -240,13 +280,11 @@ int zmk_rgb_fx_control_handle_command(const struct device *dev, uint8_t command,
             return 0;
         }
 
-        if (data->brightness == 0) {
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-        }
-
         data->brightness++;
         break;
     }
+
+    fx_control_group_refresh(dev);
 
 #if IS_ENABLED(CONFIG_SETTINGS)
     fx_control_group_save_settings(dev);
@@ -254,6 +292,11 @@ int zmk_rgb_fx_control_handle_command(const struct device *dev, uint8_t command,
 
     // Force refresh
     zmk_rgb_fx_request_frames(1);
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) && DT_HAS_CHOSEN(zmk_rgb_fx)
+    /* Push the resulting absolute state to the peripheral right away. */
+    fx_control_group_sync_push_now();
+#endif
 
     return 0;
 }
@@ -263,18 +306,22 @@ static void fx_control_group_render_frame(const struct device *dev, struct rgb_f
     const struct fx_control_group_config *config = dev->config;
     const struct fx_control_group_data *data = dev->data;
 
-    if (!data->active) {
+    if (!fx_control_group_effective_on(data)) {
         return;
     }
 
     rgb_fx_render_frame(config->fx[data->current_fx_idx], pixels, num_pixels);
 
-    if (data->brightness == config->brightness_steps) {
+    /* A USB-powered half always renders at 100%. */
+    uint8_t brightness_step =
+        fx_usb_present ? config->brightness_steps : data->brightness;
+
+    if (brightness_step == config->brightness_steps) {
         return;
     }
 
     float brightness =
-        fx_control_group_brightness_scale(data->brightness, config->brightness_steps);
+        fx_control_group_brightness_scale(brightness_step, config->brightness_steps);
 
     for (size_t i = 0; i < num_pixels; ++i) {
         pixels[i].value.r *= brightness;
@@ -287,7 +334,7 @@ static void fx_control_group_start(const struct device *dev) {
     const struct fx_control_group_config *config = dev->config;
     const struct fx_control_group_data *data = dev->data;
 
-    if (!data->active) {
+    if (!fx_control_group_effective_on(data)) {
         return;
     }
 
@@ -370,12 +417,12 @@ DT_INST_FOREACH_STATUS_OKAY(FX_CONTROL_GROUP_DEVICE);
 
 /* ---- USB power listener: RGB follows the cable ----
  *
- * Runs independently on each half (each one watches its own USB port):
- *   - cable plugged in  -> RGB ON at 100%
- *   - cable pulled out  -> RGB OFF
- * This also covers boot: the USB connection event fires during startup,
- * so a half that boots with the cable in comes up lit, and a half that
- * boots on battery stays dark (data->active defaults to false). */
+ * Runs independently on each half (each one watches its own USB port) and
+ * only updates the LOCAL fx_usb_present flag: it never touches the shared
+ * state, so it can no longer make the halves diverge. This also covers
+ * boot: the USB connection event fires during startup, so a half that
+ * boots with the cable in comes up lit, and a half that boots on battery
+ * stays dark (data->active defaults to false). */
 #if IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx)
 
 static int fx_control_group_usb_listener(const zmk_event_t *eh) {
@@ -384,21 +431,14 @@ static int fx_control_group_usb_listener(const zmk_event_t *eh) {
     }
 
     const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zmk_rgb_fx));
-    const struct fx_control_group_config *config = dev->config;
-    struct fx_control_group_data *data = dev->data;
+    bool powered = zmk_usb_is_powered();
 
-    if (zmk_usb_is_powered()) {
-        data->brightness = config->brightness_steps; /* 100% on cable power */
-
-        if (!data->active) {
-            data->active = true;
-            rgb_fx_start(config->fx[data->current_fx_idx]);
-        }
-    } else if (data->active) {
-        data->active = false;
-        rgb_fx_stop(config->fx[data->current_fx_idx]);
+    if (powered == fx_usb_present) {
+        return 0;
     }
 
+    fx_usb_present = powered;
+    fx_control_group_refresh(dev);
     zmk_rgb_fx_request_frames(1);
 
     return 0;
@@ -408,3 +448,110 @@ ZMK_LISTENER(fx_control_group_usb, fx_control_group_usb_listener);
 ZMK_SUBSCRIPTION(fx_control_group_usb, zmk_usb_conn_state_changed);
 
 #endif /* IS_ENABLED(CONFIG_ZMK_USB) && DT_HAS_CHOSEN(zmk_rgb_fx) */
+
+/* ---- central: push the absolute shared state to the peripheral ----
+ *
+ * Immediately after every &rgbfx command, and periodically as a
+ * self-heal: a peripheral that missed a push (rebooting, out of range,
+ * reconnecting) converges within FX_SYNC_PERIOD without any relative
+ * command ever being replayed. */
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) && DT_HAS_CHOSEN(zmk_rgb_fx)
+
+#define FX_SYNC_PERIOD K_SECONDS(15)
+
+static void fx_control_group_sync_work_cb(struct k_work *work) {
+    const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zmk_rgb_fx));
+    const struct fx_control_group_data *data = dev->data;
+
+    struct zmk_behavior_binding binding = {
+        .behavior_dev = "rgbsync",
+        .param1 = FX_SYNC_PACK(data->active, data->current_fx_idx, zmk_rgb_fx_hue_offset,
+                               zmk_rgb_fx_speed_get(), data->brightness),
+    };
+    struct zmk_behavior_binding_event event = {
+        .position = 0,
+        .timestamp = k_uptime_get(),
+    };
+
+    for (uint8_t source = 0; source < ZMK_SPLIT_CENTRAL_PERIPHERAL_COUNT; source++) {
+        zmk_split_central_invoke_behavior(source, &binding, event, true);
+    }
+
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    k_work_reschedule(dwork, FX_SYNC_PERIOD);
+}
+
+static K_WORK_DELAYABLE_DEFINE(fx_sync_work, fx_control_group_sync_work_cb);
+
+static void fx_control_group_sync_push_now(void) { k_work_reschedule(&fx_sync_work, K_NO_WAIT); }
+
+/* Kick off the periodic push shortly after boot (gives BLE time to link). */
+static int fx_control_group_sync_init(void) {
+    k_work_reschedule(&fx_sync_work, K_SECONDS(5));
+    return 0;
+}
+
+SYS_INIT(fx_control_group_sync_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+
+#endif /* central && chosen */
+
+/* ---- behavior rgbsync: the peripheral applies the absolute state ---- */
+
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT zmk_behavior_rgb_fx_sync
+
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT) && DT_HAS_CHOSEN(zmk_rgb_fx)
+
+static int fx_sync_on_pressed(struct zmk_behavior_binding *binding,
+                              struct zmk_behavior_binding_event event) {
+    const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zmk_rgb_fx));
+    const struct fx_control_group_config *config = dev->config;
+    struct fx_control_group_data *data = dev->data;
+
+    uint32_t p = binding->param1;
+    bool active = FX_SYNC_ACTIVE(p);
+    size_t idx = MIN(FX_SYNC_IDX(p), config->fx_size - 1);
+    uint16_t hue = FX_SYNC_HUE(p) % 360;
+    uint8_t speed = FX_SYNC_SPEED(p);
+    uint8_t brightness = CLAMP(FX_SYNC_BRT(p), 1, config->brightness_steps);
+
+    if (active == data->active && idx == data->current_fx_idx &&
+        hue == zmk_rgb_fx_hue_offset && speed == zmk_rgb_fx_speed_get() &&
+        brightness == data->brightness) {
+        return ZMK_BEHAVIOR_OPAQUE; /* already in sync: don't wear flash */
+    }
+
+    LOG_INF("rgbsync: active=%d idx=%d hue=%d speed=%d brt=%d", (int)active, (int)idx, (int)hue,
+            (int)speed, (int)brightness);
+
+    data->active = active;
+    data->brightness = brightness;
+    zmk_rgb_fx_hue_offset = hue;
+    data->hue_offset = hue;
+    zmk_rgb_fx_speed_set(speed);
+    data->speed_step = speed;
+    fx_control_group_set_idx(dev, idx);
+    fx_control_group_refresh(dev);
+    zmk_rgb_fx_request_frames(1);
+
+#if IS_ENABLED(CONFIG_SETTINGS)
+    fx_control_group_save_settings(dev);
+#endif
+
+    return ZMK_BEHAVIOR_OPAQUE;
+}
+
+static int fx_sync_on_released(struct zmk_behavior_binding *binding,
+                               struct zmk_behavior_binding_event event) {
+    return ZMK_BEHAVIOR_OPAQUE;
+}
+
+static const struct behavior_driver_api fx_sync_driver_api = {
+    .binding_pressed = fx_sync_on_pressed,
+    .binding_released = fx_sync_on_released,
+};
+
+BEHAVIOR_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,
+                        CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &fx_sync_driver_api);
+
+#endif /* DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT) && chosen */

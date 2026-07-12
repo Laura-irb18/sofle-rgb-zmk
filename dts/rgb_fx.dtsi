@@ -16,6 +16,14 @@
             compatible = "zmk,behavior-rgb-fx-layer";
             #binding-cells = <1>;
         };
+
+        /* Internal central->peripheral relay pushing the ABSOLUTE RGB
+         * state (on/off, mode, hue, speed, brightness) so both halves
+         * always converge. Name <= 8 chars (split BLE payload limit). */
+        rgbsync: rgbsync {
+            compatible = "zmk,behavior-rgb-fx-sync";
+            #binding-cells = <1>;
+        };
     };
 
     /omit-if-no-ref/ pixel: rgb_fx_pixel {

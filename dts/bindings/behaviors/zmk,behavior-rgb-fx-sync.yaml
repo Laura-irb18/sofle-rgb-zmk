@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+
+description: Internal split relay carrying the absolute RGB state (not for keymaps)
+
+compatible: "zmk,behavior-rgb-fx-sync"
+
+include: one_param.yaml

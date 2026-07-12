@@ -113,16 +113,34 @@ heatmap modes to hit the right LED) in both `config/sofle_*.overlay` files.
 
 ### Power-aware defaults (RGB follows the cable)
 
-Each half watches **its own USB port**:
+Two layers of state keep the halves consistent:
 
-- **On battery** the RGB starts **OFF**. Turning it on manually comes up
-  at **10%** brightness (raise it with RAISE + left encoder).
-- **Plugging in USB power** (PC or charger) turns the RGB **ON at 100%**.
-- **Unplugging the cable** turns the RGB **OFF** again.
+- **Shared state** (on/off switch, mode, hue, speed, brightness): owned by
+  the **left (central) half**. Every RGB key/encoder command is handled
+  there and the resulting **absolute** state is pushed to the right half
+  over BLE — immediately after each command and every 15 s as a self-heal.
+  The halves can never drift apart (inverted toggles, different modes):
+  any divergence converges on the next push.
+- **USB override** (per half): a half that senses power on **its own USB
+  port** renders **ON at 100%** no matter what the shared switch says.
+  Plug a cable into either half and it lights up; unplug it and it goes
+  back to whatever the shared switch says.
 
-The on/off state is no longer restored from flash — the power source
-decides at every boot. Mode, hue, speed and the OLED animation still
-persist.
+In practice:
+
+- **On battery** the RGB starts **OFF**. Turning it on manually (LOWER +
+  R or the encoder click) lights **both halves** at **10%** brightness
+  (raise it with RAISE + left encoder).
+- **Plugging in USB power** (PC or charger) turns that half **ON at
+  100%**; the other half keeps its battery behavior.
+- **Unplugging** returns that half to the shared switch — OFF unless you
+  had turned the RGB on manually.
+- While a half is USB-powered, the toggle/brightness keys only affect its
+  battery behavior for later — the cable always wins on that half.
+
+The manual on/off switch is not restored from flash — every boot starts
+OFF on battery, ON if a cable is present. Mode, hue, speed and the OLED
+animation still persist.
 
 ### Editing palettes and speeds
 

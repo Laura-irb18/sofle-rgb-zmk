@@ -87,8 +87,13 @@ static int on_keymap_binding_released(struct zmk_behavior_binding *binding,
 static int behavior_rgb_fx_init(const struct device *dev) { return 0; }
 
 static const struct behavior_driver_api behavior_rgb_fx_driver_api = {
-    /* Without global locality the RGB keys would only act on the central half. */
-    .locality = BEHAVIOR_LOCALITY_GLOBAL,
+    /* Central-only ON PURPOSE (default locality). This behavior used to be
+     * GLOBAL so both halves would apply each command, but relative commands
+     * (toggle = flip, next = +1) applied to states that can legitimately
+     * diverge (per-half USB power) invert or desync the halves. Now the
+     * central is the single source of truth: it handles the command and
+     * pushes the resulting ABSOLUTE state to the peripheral via `rgbsync`
+     * (see control_group.c). */
     .binding_convert_central_state_dependent_params =
         on_keymap_binding_convert_central_state_dependent_params,
     .binding_pressed = on_keymap_binding_pressed,
