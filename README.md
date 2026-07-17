@@ -171,11 +171,26 @@ Module: [codekeeb/zmk-nice-oled] `selectable` branch.
 
 ## 🏗️ Builds
 
-Push to `main` → GitHub Actions publishes the `firmware` artifact
-(`sofle_left` with ZMK Studio, `sofle_right`, `settings_reset`).
+Every push builds `sofle_left` (with ZMK Studio), `sofle_right` and
+`settings_reset`, available as the `firmware` GitHub Actions artifact
+(sign in to GitHub, 90-day expiry).
 
 **Pinned versions** for reproducible builds (`config/west.yml`):
 ZMK `v0.3`, and the [codekeeb/zmk-nice-oled] fork `selectable` branch.
+
+### 📦 Releases (precompiled firmware)
+
+Pushing a tag like `v1.0.0` also publishes a **GitHub Release** with the
+same three `.uf2` files attached — no GitHub account needed to download.
+See the [Releases page](https://github.com/codekeeb/sofle-rgb-zmk/releases)
+for ready-to-flash firmware.
+
+To cut a new release (maintainers):
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ### Flashing
 
