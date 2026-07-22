@@ -52,27 +52,6 @@
             #sensor-binding-cells = <0>;
             bindings = <&rgbfx RGBFX_SPD_UP(0)>, <&rgbfx RGBFX_SPD_DOWN(0)>;
         };
-
-        // Fast page scrolling encoder behavior - sends 20 page commands per rotation
-        fast_pg_encoder: fast_pg_encoder {
-            compatible = "zmk,behavior-sensor-rotate";
-            #sensor-binding-cells = <0>;
-            bindings = <&fast_pg_up>, <&fast_pg_dn>;
-        };
-
-        // Fast page up macro - sends 20 PG_UP commands
-        fast_pg_up: fast_pg_up {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings = <&kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP &kp PG_UP>;
-        };
-
-        // Fast page down macro - sends 20 PG_DN commands
-        fast_pg_dn: fast_pg_dn {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings = <&kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN &kp PG_DN>;
-        };
     };
 
     keymap {
@@ -94,7 +73,10 @@
                  &kp LGUI &kp LALT &kp LCTRL &mo 1  &kp RET          &kp SPACE   &mo 2  &kp RCTRL &kp RALT  &kp RGUI
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &fast_pg_encoder>;
+            // Right encoder: UP/DOWN key taps per detent (line scrolling in
+            // most apps), replacing the old 20-PG_UP/DN-per-detent macro
+            // (too abrupt -- jumped 20 pages on the slightest turn).
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp UP DOWN>;
         };
 
         lower_layer {

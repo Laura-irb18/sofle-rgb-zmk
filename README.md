@@ -25,7 +25,7 @@ Same layout as the Choc variant: layers **CODE** (base), **Lower** and
 | Gesture                 | Base                 | Lower               | Raise        |
 | ----------------------- | -------------------- | ------------------- | ------------ |
 | **Turn left encoder**   | Volume               | RGB mode ±          | Brightness ± |
-| **Turn right encoder**  | Fast page scroll     | Hue ±               | Speed ±      |
+| **Turn right encoder**  | Scroll (Up/Down)     | Hue ±               | Speed ±      |
 | **Press left encoder**  | Mute                 | RGB on/off          | —            |
 | **Press right encoder** | Play/pause           | Next OLED animation | RGB on/off   |
 
