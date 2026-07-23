@@ -9,7 +9,6 @@
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/ext_power.h>
 #include <dt-bindings/zmk/rgb_fx.h>
-#include <dt-bindings/zmk/pointing.h>
 
 /*
  * Same layout as the Choc variant (codekeeb/sofle-choc-rgb-zmk):
@@ -54,13 +53,25 @@
             bindings = <&rgbfx RGBFX_SPD_UP(0)>, <&rgbfx RGBFX_SPD_DOWN(0)>;
         };
 
-        // Base right encoder: real HID mouse-wheel scroll (not arrow keys),
-        // so apps that treat UP/DOWN as caret movement (e.g. Xcode) instead
-        // scroll like they do with a real scroll wheel.
+        // Base right encoder: 3x UP/DOWN key taps per detent instead of 1,
+        // for a faster scroll feel without going back to the old jarring
+        // 20-PG_UP/DN-per-detent macro.
+        scroll_up: scroll_up {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp UP &kp UP &kp UP>;
+        };
+
+        scroll_down: scroll_down {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp DOWN &kp DOWN &kp DOWN>;
+        };
+
         scroll_encoder: scroll_encoder {
             compatible = "zmk,behavior-sensor-rotate";
             #sensor-binding-cells = <0>;
-            bindings = <&msc SCRL_UP>, <&msc SCRL_DOWN>;
+            bindings = <&scroll_up>, <&scroll_down>;
         };
     };
 
@@ -83,10 +94,8 @@
                  &kp LGUI &kp LALT &kp LCTRL &mo 1  &kp RET          &kp SPACE   &mo 2  &kp RCTRL &kp RALT  &kp RGUI
             >;
 
-            // Right encoder: real mouse-wheel scroll events via &msc (HID
-            // pointing), so every app (browsers, Finder, Xcode, etc.)
-            // treats it as a genuine scroll wheel instead of arrow-key
-            // caret navigation.
+            // Right encoder: 3 UP/DOWN key taps per detent (faster scroll
+            // feel than the plain 1-tap-per-detent version).
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &scroll_encoder>;
         };
 
