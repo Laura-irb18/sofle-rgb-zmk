@@ -117,12 +117,12 @@
             bindings = <&rgbfx RGBFX_NEXT(0)>, <&rgbfx RGBFX_PREVIOUS(0)>;
         };
 
-        enc_r1: enc_r1 { // Lower layer, right encoder: RGB hue (factory)
+        enc_r1: enc_r1 { // Lower layer, right encoder: switch macOS desktops (Ctrl+Right / Ctrl+Left)
             compatible = "zmk,behavior-sensor-rotate-dynamic";
             #sensor-binding-cells = <0>;
             sensor-index = <1>;
             layer-id = <1>;
-            bindings = <&rgbfx RGBFX_HUE_UP(0)>, <&rgbfx RGBFX_HUE_DOWN(0)>;
+            bindings = <&kp LC(RIGHT)>, <&kp LC(LEFT)>;
         };
 
         enc_l2: enc_l2 { // Raise layer, left encoder: RGB brightness (factory)
